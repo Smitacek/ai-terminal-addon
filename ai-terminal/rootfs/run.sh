@@ -168,8 +168,29 @@ fi
 # -----------------------------------------------------------------------------
 # Nastaveni bash prostredi
 # -----------------------------------------------------------------------------
+
+# Nejdřív uložit proměnné do souboru (pro subshelly)
+cat > /etc/ai-terminal.env << ENVFILE
+export SUPERVISOR_TOKEN="$SUPERVISOR_TOKEN"
+export HA_TOKEN="$SUPERVISOR_TOKEN"
+export AI_MODE="$AI_MODE"
+export ALLOWED_FILES="$ALLOWED_FILES"
+export BACKUP_DIR="$BACKUP_DIR"
+export MQTT_BROKER="$MQTT_BROKER"
+export MQTT_PORT="$MQTT_PORT"
+export MQTT_USER="$MQTT_USER"
+export MQTT_PASSWORD="$MQTT_PASSWORD"
+export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+export OPENAI_API_KEY="$OPENAI_API_KEY"
+export GEMINI_API_KEY="$GEMINI_API_KEY"
+ENVFILE
+
 cat > /etc/profile.d/ai-terminal.sh << 'PROFILE'
-# AI Terminal environment
+# AI Terminal environment - načíst proměnné
+if [ -f /etc/ai-terminal.env ]; then
+    source /etc/ai-terminal.env
+fi
+
 export PS1='\[\033[1;32m\]ai-terminal\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ '
 
 # Aliasy pro pohodli

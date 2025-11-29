@@ -28,6 +28,22 @@ from mcp.types import (
 # Konfigurace
 # =============================================================================
 
+# Načíst proměnné z env souboru pokud existuje
+ENV_FILE = "/etc/ai-terminal.env"
+if os.path.exists(ENV_FILE):
+    with open(ENV_FILE) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                # Odstranit 'export ' prefix
+                if line.startswith('export '):
+                    line = line[7:]
+                key, _, value = line.partition('=')
+                # Odstranit uvozovky
+                value = value.strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+
 HA_URL = "http://supervisor/core/api"
 HA_TOKEN = os.environ.get("SUPERVISOR_TOKEN", "")
 MQTT_BROKER = os.environ.get("MQTT_BROKER", "")
