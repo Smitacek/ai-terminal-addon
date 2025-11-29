@@ -25,3 +25,6 @@ jsonschema>=4.21.0
 
 # Diff a patch pro YAML soubory
 deepdiff>=7.0
+
+# MCP Server SDK
+mcp>=1.0.0

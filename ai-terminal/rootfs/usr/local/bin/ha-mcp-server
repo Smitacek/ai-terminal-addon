@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ha-mcp-server - Spouštěč MCP serveru pro Home Assistant
+# =============================================================================
+
+set -e
+source /opt/venv/bin/activate
+exec python3 /app/mcp_server.py

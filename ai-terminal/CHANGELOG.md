@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.4.0] - 2024-11-29
+
+### Pridano
+- **MCP Server pro Claude CLI** - Claude ma nyni pristup k HA nastrujum:
+  - `ha_get_states` - seznam vsech entit
+  - `ha_get_state` - detailni stav entity
+  - `ha_call_service` - volani HA sluzeb
+  - `ha_get_services` - seznam sluzeb
+  - `ha_get_history` - historie entity
+  - `config_read` - cteni YAML konfigurace
+  - `config_write` - zapis YAML konfigurace
+  - `config_add_automation` - pridani automatizace
+  - `config_add_script` - pridani skriptu
+  - `config_add_scene` - pridani sceny
+  - `ha_render_template` - vyhodnoceni Jinja2 sablony
+  - `mqtt_publish` - publikovani MQTT zpravy
+  - `ha_reload` - reload konfigurace
+  - `ha_get_config` - informace o HA
+  - `ha_check_config` - kontrola konfigurace
+
+### Zmeneno
+- Claude CLI automaticky nakonfigurovan s MCP serverem
+- Aktualizovany welcome screen
+
 ## [0.3.0] - 2024-11-29
 
 ### Pridano

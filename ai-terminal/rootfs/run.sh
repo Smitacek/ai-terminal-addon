@@ -83,6 +83,40 @@ export BACKUP_DIR
 echo "[INFO] Zalozni adresar: $BACKUP_DIR"
 
 # -----------------------------------------------------------------------------
+# Konfigurace Claude CLI MCP serveru
+# -----------------------------------------------------------------------------
+echo "[INFO] Konfiguruji Claude CLI s MCP serverem..."
+
+CLAUDE_CONFIG_DIR="/root/.claude"
+mkdir -p "$CLAUDE_CONFIG_DIR"
+
+cat > "$CLAUDE_CONFIG_DIR/settings.json" << EOF
+{
+  "mcpServers": {
+    "home-assistant": {
+      "command": "/usr/local/bin/ha-mcp-server",
+      "env": {
+        "SUPERVISOR_TOKEN": "$SUPERVISOR_TOKEN",
+        "AI_MODE": "$AI_MODE",
+        "ALLOWED_FILES": "$ALLOWED_FILES",
+        "MQTT_BROKER": "$MQTT_BROKER",
+        "MQTT_PORT": "$MQTT_PORT",
+        "MQTT_USER": "$MQTT_USER",
+        "MQTT_PASSWORD": "$MQTT_PASSWORD"
+      }
+    }
+  },
+  "permissions": {
+    "allow": [
+      "mcp__home-assistant__*"
+    ]
+  }
+}
+EOF
+
+echo "[INFO] Claude CLI MCP konfigurace vytvorena"
+
+# -----------------------------------------------------------------------------
 # Inicializace MQTT pokud je nakonfigurovano
 # -----------------------------------------------------------------------------
 if [ -n "$MQTT_BROKER" ]; then
@@ -115,20 +149,17 @@ alias ha='ha-cli'
 # Welcome message
 echo ""
 echo "==========================================="
-echo "  AI TERMINAL PRO HOME ASSISTANT v0.3.0"
+echo "  AI TERMINAL PRO HOME ASSISTANT v0.4.0"
 echo "==========================================="
 echo ""
-echo "AI Asistenti:"
-echo "  claude / gemini   - Interaktivni AI chat"
+echo "AI Asistenti s MCP nastroji:"
+echo "  claude    - Claude CLI + Home Assistant tools"
+echo "  gemini    - Gemini CLI"
 echo ""
-echo "Specializovani agenti:"
-echo "  ai-auto      - Automatizace"
-echo "  ai-entity    - Entity a sluzby"
-echo "  ai-sensor    - Template/MQTT senzory"
-echo "  ai-script    - Skripty a sceny"
-echo "  ai-energy    - FVE, baterie, spotreba"
-echo "  ai-debug     - Diagnostika"
-echo "  ai-helper    - Input helpers, groups"
+echo "Claude ma pristup k:"
+echo "  - ha_get_states, ha_get_state, ha_call_service"
+echo "  - config_read, config_write, config_add_automation"
+echo "  - ha_render_template, mqtt_publish, ha_reload"
 echo ""
 echo "Nastroje:"
 echo "  ai-config    - AI konfigurator"
