@@ -1,6 +1,6 @@
 # AI Terminal pro Home Assistant
 
-Plnohodnotny webovy terminal s integrovanym Claude CLI a AI agentem pro konfiguraci Home Assistanta.
+Plnohodnotny webovy terminal s integrovanym Claude CLI, Gemini CLI a AI agentem pro konfiguraci Home Assistanta.
 
 ## Funkce
 
@@ -9,10 +9,17 @@ Plnohodnotny webovy terminal s integrovanym Claude CLI a AI agentem pro konfigur
 - Plnohodnotny Bash shell s xterm.js
 - Tmave tema optimalizovane pro praci
 
-### Claude CLI
+### Claude CLI (Anthropic)
 - Oficialni Claude CLI od Anthropic
 - Interaktivni chat: `claude chat`
 - Jednorazove dotazy: `claude "tvuj dotaz"`
+- API klic: console.anthropic.com
+
+### Gemini CLI (Google)
+- Oficialni Gemini CLI od Google
+- Interaktivni chat: `gemini`
+- 60 req/min zdarma s Google uctem
+- API klic: aistudio.google.com
 
 ### AI Config Agent
 - Generovani YAML konfigurace pro HA
@@ -35,7 +42,7 @@ Plnohodnotny webovy terminal s integrovanym Claude CLI a AI agentem pro konfigur
 
 1. Pridejte repository do Home Assistant
 2. Nainstalujte add-on "AI Terminal"
-3. Nastavte `claude_api_key` v konfiguraci
+3. Nastavte API klice v konfiguraci (alespon jeden)
 4. Spustte add-on
 5. Otevrete webovy terminal pres bocni panel
 
@@ -44,10 +51,11 @@ Plnohodnotny webovy terminal s integrovanym Claude CLI a AI agentem pro konfigur
 ### Zakladni nastaveni
 
 ```yaml
-mode: dry_run           # read_only | dry_run | apply
-claude_api_key: "sk-..." # Vas Anthropic API klic
-backup_enabled: true     # Automaticke zalohy
-sandbox_enabled: true    # Sandbox pro dry-run
+mode: dry_run              # read_only | dry_run | apply
+claude_api_key: "sk-..."   # Anthropic API klic (volitelne)
+gemini_api_key: "AI..."    # Google Gemini API klic (volitelne)
+backup_enabled: true       # Automaticke zalohy
+sandbox_enabled: true      # Sandbox pro dry-run
 ```
 
 ### Povolene soubory
@@ -79,6 +87,16 @@ claude chat
 
 # Jednorazovy dotaz
 claude "jak vytvorit automatizaci pro svetla?"
+```
+
+### Gemini CLI
+
+```bash
+# Interaktivni rezim
+gemini
+
+# S dotazem
+gemini "navrhni YAML pro FVE monitoring"
 ```
 
 ### AI Config Agent
@@ -148,7 +166,7 @@ ai-backup clean 7
 ### Aktualizace
 
 ```bash
-# Aktualizace Claude CLI a Python zavislosti
+# Aktualizace Claude CLI, Gemini CLI a Python zavislosti
 ai-update
 ```
 
@@ -184,11 +202,30 @@ ai-update
     └── scripts.yaml.20240115_120001.bak
 ```
 
+## Ziskani API klicu
+
+### Claude (Anthropic)
+1. Jdi na https://console.anthropic.com
+2. Vytvor ucet nebo se prihlasi
+3. V sekci API Keys vytvor novy klic
+4. Vloz do `claude_api_key`
+
+### Gemini (Google)
+1. Jdi na https://aistudio.google.com
+2. Prihlasi se Google uctem
+3. Klikni na "Get API key"
+4. Vloz do `gemini_api_key`
+5. Free tier: 60 req/min, 1000 req/den
+
 ## Reseni problemu
 
 ### Claude CLI nefunguje
 - Zkontrolujte `claude_api_key` v konfiguraci
 - Overite platnost API klice na console.anthropic.com
+
+### Gemini CLI nefunguje
+- Zkontrolujte `gemini_api_key` v konfiguraci
+- Overite platnost API klice na aistudio.google.com
 
 ### MQTT Inspector nevidí topicy
 - Zkontrolujte `mqtt_broker` nastaveni
@@ -204,5 +241,5 @@ ai-update
 
 ## Podpora
 
-- GitHub Issues: https://github.com/your-repo/ai-terminal-addon/issues
+- GitHub Issues: https://github.com/Smitacek/ai-terminal-addon/issues
 - Home Assistant Community: https://community.home-assistant.io

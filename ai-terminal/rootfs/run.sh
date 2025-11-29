@@ -19,6 +19,7 @@ SANDBOX_ENABLED=$(jq -r '.sandbox_enabled // true' "$CONFIG_PATH")
 SANDBOX_DIR=$(jq -r '.sandbox_dir // "/config/ai_sandbox"' "$CONFIG_PATH")
 LOG_LEVEL=$(jq -r '.log_level // "info"' "$CONFIG_PATH")
 CLAUDE_API_KEY=$(jq -r '.claude_api_key // ""' "$CONFIG_PATH")
+GEMINI_API_KEY=$(jq -r '.gemini_api_key // ""' "$CONFIG_PATH")
 MQTT_BROKER=$(jq -r '.mqtt_broker // ""' "$CONFIG_PATH")
 MQTT_PORT=$(jq -r '.mqtt_port // 1883' "$CONFIG_PATH")
 MQTT_USER=$(jq -r '.mqtt_user // ""' "$CONFIG_PATH")
@@ -35,6 +36,7 @@ export SANDBOX_DIR
 export LOG_LEVEL
 export ALLOWED_FILES
 export ANTHROPIC_API_KEY="$CLAUDE_API_KEY"
+export GEMINI_API_KEY="$GEMINI_API_KEY"
 export MQTT_BROKER
 export MQTT_PORT
 export MQTT_USER
@@ -56,8 +58,12 @@ echo "  - Allowed Files: $ALLOWED_FILES"
 # -----------------------------------------------------------------------------
 if [ -z "$CLAUDE_API_KEY" ]; then
     echo "[WARN] Claude API klic neni nastaven!"
-    echo "[WARN] Claude CLI bude fungovat pouze v omezenem rezimu."
-    echo "[WARN] Nastavte 'claude_api_key' v konfiguraci add-onu."
+    echo "[WARN] Claude CLI nebude funkcni. Nastavte 'claude_api_key' v konfiguraci."
+fi
+
+if [ -z "$GEMINI_API_KEY" ]; then
+    echo "[WARN] Gemini API klic neni nastaven!"
+    echo "[WARN] Gemini CLI nebude funkcni. Nastavte 'gemini_api_key' v konfiguraci."
 fi
 
 # -----------------------------------------------------------------------------
@@ -113,11 +119,12 @@ echo "  AI TERMINAL PRO HOME ASSISTANT"
 echo "==========================================="
 echo ""
 echo "Dostupne prikazy:"
-echo "  claude        - Claude CLI (AI asistent)"
+echo "  claude        - Claude CLI (Anthropic)"
+echo "  gemini        - Gemini CLI (Google)"
 echo "  ai-config     - AI konfigurator pro HA"
 echo "  mqtt-inspect  - MQTT inspector"
 echo "  ha-cli        - Home Assistant CLI"
-echo "  ai-update     - Aktualizace Claude CLI"
+echo "  ai-update     - Aktualizace AI CLI nastroju"
 echo ""
 echo "Aktualni mod: $AI_MODE"
 echo ""

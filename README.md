@@ -6,11 +6,12 @@
 
 ### AI Terminal
 
-Plnohodnotny webovy terminal s integrovanym Claude CLI a AI agentem pro konfiguraci Home Assistanta.
+Plnohodnotny webovy terminal s integrovanym Claude CLI, Gemini CLI a AI agentem pro konfiguraci Home Assistanta.
 
 **Funkce:**
 - Webovy terminal (ttyd + xterm.js) primo v HA
-- Claude CLI (`@anthropic-ai/claude-code`)
+- Claude CLI (`@anthropic-ai/claude-code`) - Anthropic
+- Gemini CLI (`@google/gemini-cli`) - Google
 - AI Config Agent pro upravu YAML konfigurace
 - MQTT Inspector pro analyzu topicu
 - HA CLI pro interakci s Home Assistantem
@@ -24,7 +25,9 @@ Plnohodnotny webovy terminal s integrovanym Claude CLI a AI agentem pro konfigur
    - Klikni na **...** (menu) > **Repositories**
    - Pridej URL: `https://github.com/Smitacek/ai-terminal-addon`
 2. Najdi "AI Terminal" a nainstaluj
-3. Nastav `claude_api_key` v konfiguraci
+3. Nastav API klice v konfiguraci:
+   - `claude_api_key` - z console.anthropic.com
+   - `gemini_api_key` - z aistudio.google.com (zdarma)
 4. Spust add-on
 
 ## Dokumentace
