@@ -1,0 +1,86 @@
+name: AI Terminal
+description: >
+  Plnohodnotny terminal s Claude CLI a AI agentem pro konfiguraci Home Assistanta.
+  Webovy terminal primo v prohlizeci s pristupem ke konfiguraci HA, MQTT a HA API.
+version: "0.1.0"
+slug: ai_terminal
+url: "https://github.com/your-repo/ai-terminal-addon"
+
+arch:
+  - aarch64
+  - amd64
+  - armv7
+  - i386
+
+init: false
+startup: services
+boot: auto
+
+ingress: true
+ingress_port: 7681
+panel_icon: mdi:console
+panel_title: AI Terminal
+
+homeassistant_api: true
+hassio_api: true
+
+map:
+  - config:rw
+  - ssl:ro
+  - addons:ro
+  - backup:rw
+  - share:rw
+
+services:
+  - mqtt:want
+
+ports:
+  7681/tcp: null
+
+ports_description:
+  7681/tcp: Web Terminal (ttyd)
+
+options:
+  mode: "dry_run"
+  allowed_files:
+    - automations.yaml
+    - scripts.yaml
+    - scenes.yaml
+    - ai_config.yaml
+    - configuration.yaml
+  backup_enabled: true
+  sandbox_enabled: true
+  sandbox_dir: "/config/ai_sandbox"
+  log_level: "info"
+  claude_api_key: ""
+  mqtt_broker: ""
+  mqtt_port: 1883
+  mqtt_user: ""
+  mqtt_password: ""
+
+schema:
+  mode: list(read_only|dry_run|apply)
+  allowed_files:
+    - str
+  backup_enabled: bool
+  sandbox_enabled: bool
+  sandbox_dir: str
+  log_level: list(debug|info|warning|error)
+  claude_api_key: password
+  mqtt_broker: str?
+  mqtt_port: port?
+  mqtt_user: str?
+  mqtt_password: password?
+
+environment:
+  AI_MODE: "{{ .mode }}"
+  ANTHROPIC_API_KEY: "{{ .claude_api_key }}"
+  ALLOWED_FILES: "{{ .allowed_files | join \",\" }}"
+  BACKUP_ENABLED: "{{ .backup_enabled }}"
+  SANDBOX_ENABLED: "{{ .sandbox_enabled }}"
+  SANDBOX_DIR: "{{ .sandbox_dir }}"
+  LOG_LEVEL: "{{ .log_level }}"
+  MQTT_BROKER: "{{ .mqtt_broker }}"
+  MQTT_PORT: "{{ .mqtt_port }}"
+  MQTT_USER: "{{ .mqtt_user }}"
+  MQTT_PASSWORD: "{{ .mqtt_password }}"

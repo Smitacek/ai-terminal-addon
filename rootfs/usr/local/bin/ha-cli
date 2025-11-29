@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ha-cli - Home Assistant CLI wrapper
+# Zjednoduseny pristup k HA Supervisor API
+# =============================================================================
+
+set -e
+
+# Aktivace Python venv
+source /opt/venv/bin/activate
+
+# Spusteni HA interface
+exec python3 /app/ha_interface.py "$@"

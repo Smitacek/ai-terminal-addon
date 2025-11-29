@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-update - Aktualizace Claude CLI a Python zavislosti
+# =============================================================================
+
+set -e
+
+echo "==========================================="
+echo "  AKTUALIZACE AI TERMINAL KOMPONENT"
+echo "==========================================="
+echo ""
+
+# Aktualizace Claude CLI
+echo "[1/2] Aktualizuji Claude CLI..."
+npm update -g @anthropic-ai/claude-code
+echo "      Claude CLI: $(claude --version 2>/dev/null || echo 'OK')"
+echo ""
+
+# Aktualizace Python zavislosti
+echo "[2/2] Aktualizuji Python zavislosti..."
+source /opt/venv/bin/activate
+pip install --upgrade anthropic paho-mqtt PyYAML httpx rich 2>/dev/null
+echo ""
+
+echo "==========================================="
+echo "  AKTUALIZACE DOKONCENA"
+echo "==========================================="

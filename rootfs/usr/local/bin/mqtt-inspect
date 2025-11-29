@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# =============================================================================
+# mqtt-inspect - MQTT Inspector pro Home Assistant
+# Sbira MQTT topicy a uklada je pro AI kontext
+# =============================================================================
+
+set -e
+
+# Aktivace Python venv
+source /opt/venv/bin/activate
+
+# Spusteni MQTT inspektoru
+exec python3 /app/mqtt_inspector.py "$@"

@@ -1,0 +1,50 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start ttyd weboveho terminalu
+# ==============================================================================
+
+bashio::log.info "Spoustim AI Terminal..."
+
+# Nacteni konfigurace
+AI_MODE=$(bashio::config 'mode')
+BACKUP_ENABLED=$(bashio::config 'backup_enabled')
+SANDBOX_ENABLED=$(bashio::config 'sandbox_enabled')
+SANDBOX_DIR=$(bashio::config 'sandbox_dir')
+LOG_LEVEL=$(bashio::config 'log_level')
+CLAUDE_API_KEY=$(bashio::config 'claude_api_key')
+
+# Export pro podprocesy
+export AI_MODE
+export BACKUP_ENABLED
+export SANDBOX_ENABLED
+export SANDBOX_DIR
+export LOG_LEVEL
+export ANTHROPIC_API_KEY="${CLAUDE_API_KEY}"
+
+# MQTT konfigurace (volitelne)
+if bashio::config.has_value 'mqtt_broker'; then
+    export MQTT_BROKER=$(bashio::config 'mqtt_broker')
+    export MQTT_PORT=$(bashio::config 'mqtt_port')
+    export MQTT_USER=$(bashio::config 'mqtt_user')
+    export MQTT_PASSWORD=$(bashio::config 'mqtt_password')
+fi
+
+# Allowed files
+ALLOWED_FILES=$(bashio::config 'allowed_files | join(",")')
+export ALLOWED_FILES
+
+# Backup adresar
+export BACKUP_DIR="/config/.ai_backups"
+mkdir -p "${BACKUP_DIR}"
+
+bashio::log.info "AI Mode: ${AI_MODE}"
+bashio::log.info "Backup: ${BACKUP_ENABLED}"
+
+# Spusteni ttyd
+exec ttyd \
+    -p 7681 \
+    -W \
+    -t 'fontSize=14' \
+    -t 'fontFamily=monospace' \
+    -t 'theme={"background":"#1a1a2e","foreground":"#eaeaea","cursor":"#00ff00"}' \
+    bash --login

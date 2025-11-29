@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# =============================================================================
+# AI Terminal Add-on - Hlavni spousteci skript
+# =============================================================================
+
+set -e
+
+CONFIG_PATH="/data/options.json"
+
+# -----------------------------------------------------------------------------
+# Nacteni konfigurace z Home Assistant options
+# -----------------------------------------------------------------------------
+echo "[INFO] Nacitam konfiguraci add-onu..."
+
+# Nacteni options z JSON
+AI_MODE=$(jq -r '.mode // "dry_run"' "$CONFIG_PATH")
+BACKUP_ENABLED=$(jq -r '.backup_enabled // true' "$CONFIG_PATH")
+SANDBOX_ENABLED=$(jq -r '.sandbox_enabled // true' "$CONFIG_PATH")
+SANDBOX_DIR=$(jq -r '.sandbox_dir // "/config/ai_sandbox"' "$CONFIG_PATH")
+LOG_LEVEL=$(jq -r '.log_level // "info"' "$CONFIG_PATH")
+CLAUDE_API_KEY=$(jq -r '.claude_api_key // ""' "$CONFIG_PATH")
+MQTT_BROKER=$(jq -r '.mqtt_broker // ""' "$CONFIG_PATH")
+MQTT_PORT=$(jq -r '.mqtt_port // 1883' "$CONFIG_PATH")
+MQTT_USER=$(jq -r '.mqtt_user // ""' "$CONFIG_PATH")
+MQTT_PASSWORD=$(jq -r '.mqtt_password // ""' "$CONFIG_PATH")
+
+# Allowed files jako pole
+ALLOWED_FILES=$(jq -r '.allowed_files | join(",")' "$CONFIG_PATH")
+
+# Export promennych pro podprocesy
+export AI_MODE
+export BACKUP_ENABLED
+export SANDBOX_ENABLED
+export SANDBOX_DIR
+export LOG_LEVEL
+export ALLOWED_FILES
+export ANTHROPIC_API_KEY="$CLAUDE_API_KEY"
+export MQTT_BROKER
+export MQTT_PORT
+export MQTT_USER
+export MQTT_PASSWORD
+
+# HA Supervisor token (automaticky dostupny)
+export SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN:-}"
+export HA_TOKEN="${SUPERVISOR_TOKEN}"
+
+echo "[INFO] Konfigurace nactena:"
+echo "  - AI Mode: $AI_MODE"
+echo "  - Backup: $BACKUP_ENABLED"
+echo "  - Sandbox: $SANDBOX_ENABLED"
+echo "  - Log Level: $LOG_LEVEL"
+echo "  - Allowed Files: $ALLOWED_FILES"
+
+# -----------------------------------------------------------------------------
+# Kontrola API klice
+# -----------------------------------------------------------------------------
+if [ -z "$CLAUDE_API_KEY" ]; then
+    echo "[WARN] Claude API klic neni nastaven!"
+    echo "[WARN] Claude CLI bude fungovat pouze v omezenem rezimu."
+    echo "[WARN] Nastavte 'claude_api_key' v konfiguraci add-onu."
+fi
+
+# -----------------------------------------------------------------------------
+# Vytvoreni sandbox adresare pokud je povolen
+# -----------------------------------------------------------------------------
+if [ "$SANDBOX_ENABLED" = "true" ]; then
+    echo "[INFO] Vytvarim sandbox adresar: $SANDBOX_DIR"
+    mkdir -p "$SANDBOX_DIR"
+fi
+
+# -----------------------------------------------------------------------------
+# Vytvoreni zalozniho adresare
+# -----------------------------------------------------------------------------
+BACKUP_DIR="/config/.ai_backups"
+mkdir -p "$BACKUP_DIR"
+export BACKUP_DIR
+echo "[INFO] Zalozni adresar: $BACKUP_DIR"
+
+# -----------------------------------------------------------------------------
+# Inicializace MQTT pokud je nakonfigurovano
+# -----------------------------------------------------------------------------
+if [ -n "$MQTT_BROKER" ]; then
+    echo "[INFO] MQTT broker: $MQTT_BROKER:$MQTT_PORT"
+    # Test pripojeni
+    if mosquitto_sub -h "$MQTT_BROKER" -p "$MQTT_PORT" \
+        ${MQTT_USER:+-u "$MQTT_USER"} \
+        ${MQTT_PASSWORD:+-P "$MQTT_PASSWORD"} \
+        -t '#' -C 1 -W 3 2>/dev/null; then
+        echo "[INFO] MQTT pripojeni OK"
+    else
+        echo "[WARN] MQTT pripojeni selhalo - mqtt-inspect nebude funkcni"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
+# Nastaveni bash prostredi
+# -----------------------------------------------------------------------------
+cat > /etc/profile.d/ai-terminal.sh << 'PROFILE'
+# AI Terminal environment
+export PS1='\[\033[1;32m\]ai-terminal\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ '
+
+# Aliasy pro pohodli
+alias ll='ls -la'
+alias la='ls -A'
+alias l='ls -CF'
+alias cls='clear'
+alias ha='ha-cli'
+
+# Welcome message
+echo ""
+echo "==========================================="
+echo "  AI TERMINAL PRO HOME ASSISTANT"
+echo "==========================================="
+echo ""
+echo "Dostupne prikazy:"
+echo "  claude        - Claude CLI (AI asistent)"
+echo "  ai-config     - AI konfigurator pro HA"
+echo "  mqtt-inspect  - MQTT inspector"
+echo "  ha-cli        - Home Assistant CLI"
+echo "  ai-update     - Aktualizace Claude CLI"
+echo ""
+echo "Aktualni mod: $AI_MODE"
+echo ""
+PROFILE
+
+# -----------------------------------------------------------------------------
+# Spusteni ttyd (webovy terminal)
+# -----------------------------------------------------------------------------
+echo "[INFO] Spoustim webovy terminal na portu 7681..."
+
+# ttyd parametry:
+#   -p 7681      - port
+#   -W           - zapisovatelny terminal
+#   -t fontSize=14
+#   -t theme={"background":"#1e1e1e"}
+
+exec ttyd \
+    -p 7681 \
+    -W \
+    -t 'fontSize=14' \
+    -t 'fontFamily=monospace' \
+    -t 'theme={"background":"#1a1a2e","foreground":"#eaeaea","cursor":"#00ff00"}' \
+    bash --login

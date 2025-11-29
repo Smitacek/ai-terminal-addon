@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-config - AI konfigurator pro Home Assistant
+# Pouziti: ai-config "popis zmeny kterou chces provest"
+# =============================================================================
+
+set -e
+
+# Aktivace Python venv
+source /opt/venv/bin/activate
+
+# Spusteni Python agenta
+exec python3 /app/ai_agent.py "$@"
