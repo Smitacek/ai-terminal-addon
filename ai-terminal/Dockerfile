@@ -34,7 +34,7 @@ RUN apk add --no-cache \
 RUN apk add --no-cache --virtual .build-deps \
     build-base \
     python3-dev \
-    && npm install -g @anthropic-ai/claude-code @google/gemini-cli \
+    && npm install -g @anthropic-ai/claude-code @google/gemini-cli @openai/codex \
     && npm cache clean --force \
     && apk del .build-deps
 

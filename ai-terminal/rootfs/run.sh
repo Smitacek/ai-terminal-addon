@@ -19,6 +19,7 @@ SANDBOX_ENABLED=$(jq -r '.sandbox_enabled // true' "$CONFIG_PATH")
 SANDBOX_DIR=$(jq -r '.sandbox_dir // "/config/ai_sandbox"' "$CONFIG_PATH")
 LOG_LEVEL=$(jq -r '.log_level // "info"' "$CONFIG_PATH")
 CLAUDE_API_KEY=$(jq -r '.claude_api_key // ""' "$CONFIG_PATH")
+OPENAI_API_KEY=$(jq -r '.openai_api_key // ""' "$CONFIG_PATH")
 GEMINI_API_KEY=$(jq -r '.gemini_api_key // ""' "$CONFIG_PATH")
 MQTT_BROKER=$(jq -r '.mqtt_broker // ""' "$CONFIG_PATH")
 MQTT_PORT=$(jq -r '.mqtt_port // 1883' "$CONFIG_PATH")
@@ -36,6 +37,7 @@ export SANDBOX_DIR
 export LOG_LEVEL
 export ALLOWED_FILES
 export ANTHROPIC_API_KEY="$CLAUDE_API_KEY"
+export OPENAI_API_KEY="$OPENAI_API_KEY"
 export GEMINI_API_KEY="$GEMINI_API_KEY"
 export MQTT_BROKER
 export MQTT_PORT
@@ -59,6 +61,11 @@ echo "  - Allowed Files: $ALLOWED_FILES"
 if [ -z "$CLAUDE_API_KEY" ]; then
     echo "[WARN] Claude API klic neni nastaven!"
     echo "[WARN] Claude CLI nebude funkcni. Nastavte 'claude_api_key' v konfiguraci."
+fi
+
+if [ -z "$OPENAI_API_KEY" ]; then
+    echo "[WARN] OpenAI API klic neni nastaven!"
+    echo "[WARN] Codex CLI nebude funkcni. Nastavte 'openai_api_key' v konfiguraci."
 fi
 
 if [ -z "$GEMINI_API_KEY" ]; then
@@ -117,6 +124,32 @@ EOF
 echo "[INFO] Claude CLI MCP konfigurace vytvorena"
 
 # -----------------------------------------------------------------------------
+# Konfigurace Codex CLI MCP serveru
+# -----------------------------------------------------------------------------
+echo "[INFO] Konfiguruji Codex CLI s MCP serverem..."
+
+CODEX_CONFIG_DIR="/root/.codex"
+mkdir -p "$CODEX_CONFIG_DIR"
+
+cat > "$CODEX_CONFIG_DIR/config.toml" << EOF
+# Codex CLI konfigurace pro AI Terminal
+
+[mcp_servers.home-assistant]
+command = "/usr/local/bin/ha-mcp-server"
+
+[mcp_servers.home-assistant.env]
+SUPERVISOR_TOKEN = "$SUPERVISOR_TOKEN"
+AI_MODE = "$AI_MODE"
+ALLOWED_FILES = "$ALLOWED_FILES"
+MQTT_BROKER = "$MQTT_BROKER"
+MQTT_PORT = "$MQTT_PORT"
+MQTT_USER = "$MQTT_USER"
+MQTT_PASSWORD = "$MQTT_PASSWORD"
+EOF
+
+echo "[INFO] Codex CLI MCP konfigurace vytvorena"
+
+# -----------------------------------------------------------------------------
 # Inicializace MQTT pokud je nakonfigurovano
 # -----------------------------------------------------------------------------
 if [ -n "$MQTT_BROKER" ]; then
@@ -149,22 +182,20 @@ alias ha='ha-cli'
 # Welcome message
 echo ""
 echo "==========================================="
-echo "  AI TERMINAL PRO HOME ASSISTANT v0.4.0"
+echo "  AI TERMINAL PRO HOME ASSISTANT v0.5.0"
 echo "==========================================="
 echo ""
-echo "AI Asistenti s MCP nastroji:"
-echo "  claude    - Claude CLI + Home Assistant tools"
-echo "  gemini    - Gemini CLI"
+echo "AI Asistenti s MCP Home Assistant tools:"
+echo "  claude    - Anthropic Claude CLI"
+echo "  codex     - OpenAI Codex CLI"
+echo "  gemini    - Google Gemini CLI (bez MCP)"
 echo ""
-echo "Claude ma pristup k:"
-echo "  - ha_get_states, ha_get_state, ha_call_service"
-echo "  - config_read, config_write, config_add_automation"
-echo "  - ha_render_template, mqtt_publish, ha_reload"
+echo "MCP nastroje (claude/codex):"
+echo "  ha_get_states, ha_call_service, config_add_automation..."
 echo ""
 echo "Nastroje:"
-echo "  ai-config    - AI konfigurator"
-echo "  mqtt-inspect - MQTT inspector"
 echo "  ha-cli       - Home Assistant CLI"
+echo "  mqtt-inspect - MQTT inspector"
 echo "  ai-help      - Napoveda"
 echo ""
 echo "Mod: $AI_MODE | Napoveda: ai-help"

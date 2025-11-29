@@ -1,8 +1,8 @@
 name: AI Terminal
 description: >
-  Plnohodnotny terminal s Claude CLI, Gemini CLI a AI agentem pro konfiguraci Home Assistanta.
+  Plnohodnotny terminal s Claude CLI, Codex CLI, Gemini CLI a AI agentem pro konfiguraci Home Assistanta.
   Webovy terminal primo v prohlizeci s pristupem ke konfiguraci HA, MQTT a HA API.
-version: "0.4.0"
+version: "0.5.0"
 slug: ai_terminal
 url: "https://github.com/Smitacek/ai-terminal-addon"
 
@@ -53,6 +53,7 @@ options:
   sandbox_dir: "/config/ai_sandbox"
   log_level: "info"
   claude_api_key: ""
+  openai_api_key: ""
   gemini_api_key: ""
   mqtt_broker: ""
   mqtt_port: 1883
@@ -68,6 +69,7 @@ schema:
   sandbox_dir: str
   log_level: list(debug|info|warning|error)
   claude_api_key: password?
+  openai_api_key: password?
   gemini_api_key: password?
   mqtt_broker: str?
   mqtt_port: port?
@@ -77,6 +79,7 @@ schema:
 environment:
   AI_MODE: "{{ .mode }}"
   ANTHROPIC_API_KEY: "{{ .claude_api_key }}"
+  OPENAI_API_KEY: "{{ .openai_api_key }}"
   GEMINI_API_KEY: "{{ .gemini_api_key }}"
   ALLOWED_FILES: "{{ .allowed_files | join \",\" }}"
   BACKUP_ENABLED: "{{ .backup_enabled }}"

@@ -1,9 +1,27 @@
 # Changelog
 
-## [0.4.0] - 2024-11-29
+## [0.5.0] - 2025-11-29
 
 ### Pridano
-- **MCP Server pro Claude CLI** - Claude ma nyni pristup k HA nastrujum:
+- **OpenAI Codex CLI** (@openai/codex) s MCP podporou
+- `openai_api_key` v konfiguraci
+- Codex CLI automaticky nakonfigurovan s MCP serverem
+- **ha-tool** - univerzalni nastroj pro Gemini a dalsi AI bez MCP:
+  - `ha-tool states [domain]` - seznam entit
+  - `ha-tool state <entity>` - stav entity
+  - `ha-tool on/off/toggle <entity>` - ovladani entit
+  - `ha-tool call <domain> <service>` - volani sluzeb
+  - `ha-tool template '<jinja>'` - vyhodnoceni sablony
+  - `ha-tool reload <component>` - reload konfigurace
+
+### Zmeneno
+- Tri AI asistenti: Claude, Codex (s MCP), Gemini (bez MCP)
+- Aktualizovany welcome screen
+
+## [0.4.0] - 2025-11-29
+
+### Pridano
+- **MCP Server pro Claude CLI a Codex CLI** - Claude ma nyni pristup k HA nastrujum:
   - `ha_get_states` - seznam vsech entit
   - `ha_get_state` - detailni stav entity
   - `ha_call_service` - volani HA sluzeb

@@ -1,0 +1,369 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ha-tool - Univerzální nástroj pro Home Assistant
+# Pro použití s Gemini CLI a dalšími AI asistenty bez MCP podpory
+# =============================================================================
+
+set -e
+
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+HA_URL="http://supervisor/core/api"
+
+# Funkce pro HA API volání
+ha_api() {
+    local method="$1"
+    local endpoint="$2"
+    local data="$3"
+
+    if [ "$method" = "GET" ]; then
+        curl -s -X GET \
+            -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+            -H "Content-Type: application/json" \
+            "${HA_URL}${endpoint}"
+    else
+        curl -s -X POST \
+            -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "${data:-{}}" \
+            "${HA_URL}${endpoint}"
+    fi
+}
+
+show_help() {
+    echo ""
+    echo -e "${CYAN}ha-tool${NC} - Univerzální nástroj pro Home Assistant"
+    echo ""
+    echo -e "${YELLOW}POUŽITÍ:${NC}"
+    echo "  ha-tool <příkaz> [argumenty]"
+    echo ""
+    echo -e "${YELLOW}ENTITY:${NC}"
+    echo "  ha-tool states [domain]           Seznam entit (volitelně filtr podle domény)"
+    echo "  ha-tool state <entity_id>         Stav konkrétní entity"
+    echo "  ha-tool on <entity_id>            Zapnout entitu"
+    echo "  ha-tool off <entity_id>           Vypnout entitu"
+    echo "  ha-tool toggle <entity_id>        Přepnout entitu"
+    echo ""
+    echo -e "${YELLOW}SLUŽBY:${NC}"
+    echo "  ha-tool call <domain> <service> [entity_id] [json_data]"
+    echo "                                    Zavolat službu"
+    echo "  ha-tool services [domain]         Seznam služeb"
+    echo ""
+    echo -e "${YELLOW}KONFIGURACE:${NC}"
+    echo "  ha-tool config                    Informace o HA"
+    echo "  ha-tool check                     Kontrola konfigurace"
+    echo "  ha-tool reload <component>        Reload (automation/script/scene/all)"
+    echo ""
+    echo -e "${YELLOW}SOUBORY:${NC}"
+    echo "  ha-tool read <filename>           Číst YAML soubor"
+    echo "  ha-tool automations               Seznam automatizací"
+    echo "  ha-tool scripts                   Seznam skriptů"
+    echo "  ha-tool scenes                    Seznam scén"
+    echo ""
+    echo -e "${YELLOW}ŠABLONY:${NC}"
+    echo "  ha-tool template '<jinja2>'       Vyhodnotit šablonu"
+    echo ""
+    echo -e "${YELLOW}PŘÍKLADY:${NC}"
+    echo "  ha-tool states light"
+    echo "  ha-tool state sensor.temperature"
+    echo "  ha-tool on light.living_room"
+    echo "  ha-tool call climate set_temperature climate.thermostat '{\"temperature\":22}'"
+    echo "  ha-tool template '{{ states(\"sensor.temperature\") }}'"
+    echo ""
+}
+
+cmd_states() {
+    local domain="$1"
+    local result
+
+    result=$(ha_api GET "/states")
+
+    if [ -n "$domain" ]; then
+        echo "$result" | jq -r ".[] | select(.entity_id | startswith(\"${domain}.\")) | \"\(.entity_id): \(.state)\""
+    else
+        echo "$result" | jq -r '.[] | "\(.entity_id): \(.state)"' | head -100
+    fi
+}
+
+cmd_state() {
+    local entity_id="$1"
+
+    if [ -z "$entity_id" ]; then
+        echo -e "${RED}Chyba: Zadej entity_id${NC}"
+        exit 1
+    fi
+
+    ha_api GET "/states/$entity_id" | jq .
+}
+
+cmd_on() {
+    local entity_id="$1"
+    local domain="${entity_id%%.*}"
+
+    if [ -z "$entity_id" ]; then
+        echo -e "${RED}Chyba: Zadej entity_id${NC}"
+        exit 1
+    fi
+
+    if [ "$AI_MODE" = "read_only" ]; then
+        echo -e "${YELLOW}[DRY-RUN] Režim read_only - příkaz nebyl proveden${NC}"
+        echo "Zavolal bych: ${domain}.turn_on pro $entity_id"
+        exit 0
+    fi
+
+    if [ "$AI_MODE" = "dry_run" ]; then
+        echo -e "${YELLOW}[DRY-RUN] Zavolal bych: ${domain}.turn_on pro $entity_id${NC}"
+        exit 0
+    fi
+
+    ha_api POST "/services/${domain}/turn_on" "{\"entity_id\": \"$entity_id\"}"
+    echo -e "${GREEN}Zapnuto: $entity_id${NC}"
+}
+
+cmd_off() {
+    local entity_id="$1"
+    local domain="${entity_id%%.*}"
+
+    if [ -z "$entity_id" ]; then
+        echo -e "${RED}Chyba: Zadej entity_id${NC}"
+        exit 1
+    fi
+
+    if [ "$AI_MODE" = "read_only" ]; then
+        echo -e "${YELLOW}[READ-ONLY] Režim read_only - příkaz nebyl proveden${NC}"
+        exit 0
+    fi
+
+    if [ "$AI_MODE" = "dry_run" ]; then
+        echo -e "${YELLOW}[DRY-RUN] Zavolal bych: ${domain}.turn_off pro $entity_id${NC}"
+        exit 0
+    fi
+
+    ha_api POST "/services/${domain}/turn_off" "{\"entity_id\": \"$entity_id\"}"
+    echo -e "${GREEN}Vypnuto: $entity_id${NC}"
+}
+
+cmd_toggle() {
+    local entity_id="$1"
+    local domain="${entity_id%%.*}"
+
+    if [ -z "$entity_id" ]; then
+        echo -e "${RED}Chyba: Zadej entity_id${NC}"
+        exit 1
+    fi
+
+    if [ "$AI_MODE" = "read_only" ]; then
+        echo -e "${YELLOW}[READ-ONLY] Režim read_only - příkaz nebyl proveden${NC}"
+        exit 0
+    fi
+
+    if [ "$AI_MODE" = "dry_run" ]; then
+        echo -e "${YELLOW}[DRY-RUN] Zavolal bych: ${domain}.toggle pro $entity_id${NC}"
+        exit 0
+    fi
+
+    ha_api POST "/services/${domain}/toggle" "{\"entity_id\": \"$entity_id\"}"
+    echo -e "${GREEN}Přepnuto: $entity_id${NC}"
+}
+
+cmd_call() {
+    local domain="$1"
+    local service="$2"
+    local entity_or_data="$3"
+    local data="$4"
+
+    if [ -z "$domain" ] || [ -z "$service" ]; then
+        echo -e "${RED}Chyba: Zadej domain a service${NC}"
+        echo "Použití: ha-tool call <domain> <service> [entity_id] [json_data]"
+        exit 1
+    fi
+
+    local payload="{}"
+
+    # Pokud třetí argument vypadá jako entity_id
+    if [[ "$entity_or_data" == *"."* ]] && [[ "$entity_or_data" != "{"* ]]; then
+        if [ -n "$data" ]; then
+            payload=$(echo "$data" | jq ". + {\"entity_id\": \"$entity_or_data\"}")
+        else
+            payload="{\"entity_id\": \"$entity_or_data\"}"
+        fi
+    elif [ -n "$entity_or_data" ]; then
+        payload="$entity_or_data"
+    fi
+
+    if [ "$AI_MODE" = "read_only" ]; then
+        echo -e "${YELLOW}[READ-ONLY] Režim read_only - příkaz nebyl proveden${NC}"
+        exit 0
+    fi
+
+    if [ "$AI_MODE" = "dry_run" ]; then
+        echo -e "${YELLOW}[DRY-RUN] Zavolal bych: ${domain}.${service}${NC}"
+        echo "Data: $payload"
+        exit 0
+    fi
+
+    result=$(ha_api POST "/services/${domain}/${service}" "$payload")
+    echo "$result" | jq .
+    echo -e "${GREEN}Služba zavolána: ${domain}.${service}${NC}"
+}
+
+cmd_services() {
+    local domain="$1"
+    local result
+
+    result=$(ha_api GET "/services")
+
+    if [ -n "$domain" ]; then
+        echo "$result" | jq -r ".[] | select(.domain == \"$domain\") | .services | keys[]"
+    else
+        echo "$result" | jq -r '.[] | "\(.domain): \(.services | keys | join(\", \"))"'
+    fi
+}
+
+cmd_config() {
+    ha_api GET "/config" | jq .
+}
+
+cmd_check() {
+    ha_api POST "/config/core/check_config" | jq .
+}
+
+cmd_reload() {
+    local component="$1"
+
+    if [ -z "$component" ]; then
+        echo -e "${RED}Chyba: Zadej component (automation/script/scene/group/all)${NC}"
+        exit 1
+    fi
+
+    if [ "$AI_MODE" = "read_only" ]; then
+        echo -e "${YELLOW}[READ-ONLY] Režim read_only - příkaz nebyl proveden${NC}"
+        exit 0
+    fi
+
+    if [ "$AI_MODE" = "dry_run" ]; then
+        echo -e "${YELLOW}[DRY-RUN] Zavolal bych reload pro: $component${NC}"
+        exit 0
+    fi
+
+    case "$component" in
+        all)
+            ha_api POST "/services/homeassistant/reload_all"
+            ;;
+        core)
+            ha_api POST "/services/homeassistant/reload_core_config"
+            ;;
+        *)
+            ha_api POST "/services/${component}/reload"
+            ;;
+    esac
+
+    echo -e "${GREEN}Reload proveden: $component${NC}"
+}
+
+cmd_read() {
+    local filename="$1"
+
+    if [ -z "$filename" ]; then
+        echo -e "${RED}Chyba: Zadej název souboru${NC}"
+        exit 1
+    fi
+
+    local filepath="/config/$filename"
+
+    if [ ! -f "$filepath" ]; then
+        echo -e "${RED}Soubor neexistuje: $filepath${NC}"
+        exit 1
+    fi
+
+    cat "$filepath"
+}
+
+cmd_automations() {
+    ha_api GET "/states" | jq -r '.[] | select(.entity_id | startswith("automation.")) | "\(.entity_id): \(.state) - \(.attributes.friendly_name // \"\")"'
+}
+
+cmd_scripts() {
+    ha_api GET "/states" | jq -r '.[] | select(.entity_id | startswith("script.")) | "\(.entity_id): \(.state) - \(.attributes.friendly_name // \"\")"'
+}
+
+cmd_scenes() {
+    ha_api GET "/states" | jq -r '.[] | select(.entity_id | startswith("scene.")) | "\(.entity_id) - \(.attributes.friendly_name // \"\")"'
+}
+
+cmd_template() {
+    local template="$1"
+
+    if [ -z "$template" ]; then
+        echo -e "${RED}Chyba: Zadej šablonu${NC}"
+        exit 1
+    fi
+
+    curl -s -X POST \
+        -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "{\"template\": \"$template\"}" \
+        "${HA_URL}/template"
+    echo ""
+}
+
+# Main
+case "${1:-}" in
+    states)
+        cmd_states "$2"
+        ;;
+    state)
+        cmd_state "$2"
+        ;;
+    on)
+        cmd_on "$2"
+        ;;
+    off)
+        cmd_off "$2"
+        ;;
+    toggle)
+        cmd_toggle "$2"
+        ;;
+    call)
+        cmd_call "$2" "$3" "$4" "$5"
+        ;;
+    services)
+        cmd_services "$2"
+        ;;
+    config)
+        cmd_config
+        ;;
+    check)
+        cmd_check
+        ;;
+    reload)
+        cmd_reload "$2"
+        ;;
+    read)
+        cmd_read "$2"
+        ;;
+    automations)
+        cmd_automations
+        ;;
+    scripts)
+        cmd_scripts
+        ;;
+    scenes)
+        cmd_scenes
+        ;;
+    template)
+        cmd_template "$2"
+        ;;
+    help|--help|-h|"")
+        show_help
+        ;;
+    *)
+        echo -e "${RED}Neznámý příkaz: $1${NC}"
+        show_help
+        exit 1
+        ;;
+esac
