@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-debug - Debug Agent CLI
+# Diagnostika a řešení problémů
+# =============================================================================
+
+set -e
+source /opt/venv/bin/activate
+exec python3 /app/agents/debug_agent.py "$@"

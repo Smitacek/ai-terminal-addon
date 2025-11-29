@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-help - Interaktivní nápověda pro AI Terminal
+# =============================================================================
+
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+WHITE='\033[1;37m'
+DIM='\033[2m'
+NC='\033[0m' # No Color
+
+show_main_help() {
+    echo ""
+    echo -e "${WHITE}╔══════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${WHITE}║           AI TERMINAL PRO HOME ASSISTANT - NÁPOVĚDA              ║${NC}"
+    echo -e "${WHITE}╚══════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${YELLOW}AI ASISTENTI:${NC}"
+    echo -e "  ${CYAN}claude${NC}          Anthropic Claude CLI (interaktivní chat)"
+    echo -e "  ${CYAN}gemini${NC}          Google Gemini CLI (interaktivní chat)"
+    echo ""
+    echo -e "${YELLOW}SPECIALIZOVANÍ AGENTI:${NC}"
+    echo -e "  ${CYAN}ai-auto${NC}         Automatizace - vytváření a správa"
+    echo -e "  ${CYAN}ai-entity${NC}       Entity - stavy, služby, ovládání"
+    echo -e "  ${CYAN}ai-sensor${NC}       Senzory - template, MQTT, statistiky"
+    echo -e "  ${CYAN}ai-script${NC}       Skripty a scény"
+    echo -e "  ${CYAN}ai-energy${NC}       Energie - FVE, baterie, spotřeba"
+    echo -e "  ${CYAN}ai-debug${NC}        Diagnostika a řešení problémů"
+    echo -e "  ${CYAN}ai-helper${NC}       Input helpers, groups, timers"
+    echo ""
+    echo -e "${YELLOW}NÁSTROJE:${NC}"
+    echo -e "  ${CYAN}ai-config${NC}       AI konfigurátor (hlavní nástroj)"
+    echo -e "  ${CYAN}mqtt-inspect${NC}    MQTT inspektor"
+    echo -e "  ${CYAN}ha-cli${NC}          Home Assistant CLI"
+    echo -e "  ${CYAN}ai-backup${NC}       Správa záloh"
+    echo -e "  ${CYAN}ai-update${NC}       Aktualizace CLI nástrojů"
+    echo ""
+    echo -e "${YELLOW}NÁPOVĚDA:${NC}"
+    echo -e "  ${CYAN}ai-help${NC}                   Tato nápověda"
+    echo -e "  ${CYAN}ai-help <agent>${NC}           Nápověda pro agenta"
+    echo -e "  ${CYAN}ai-help examples${NC}          Příklady použití"
+    echo -e "  ${CYAN}ai-help triggers${NC}          Seznam triggerů"
+    echo -e "  ${CYAN}ai-help services${NC}          Seznam služeb"
+    echo ""
+    echo -e "${DIM}Tip: Použij --help u každého příkazu pro detailní nápovědu${NC}"
+    echo ""
+}
+
+show_agent_help() {
+    case "$1" in
+        auto|automation)
+            echo ""
+            echo -e "${WHITE}AI-AUTO - Automation Agent${NC}"
+            echo ""
+            echo -e "${YELLOW}POUŽITÍ:${NC}"
+            echo -e "  ${CYAN}ai-auto create${NC} \"popis automatizace\"   Vytvoří automatizaci"
+            echo -e "  ${CYAN}ai-auto list${NC}                          Seznam automatizací"
+            echo -e "  ${CYAN}ai-auto enable${NC} <entity_id>            Zapne automatizaci"
+            echo -e "  ${CYAN}ai-auto disable${NC} <entity_id>           Vypne automatizaci"
+            echo -e "  ${CYAN}ai-auto trigger${NC} <entity_id>           Spustí automatizaci"
+            echo ""
+            echo -e "${YELLOW}PŘÍKLADY:${NC}"
+            echo "  ai-auto create \"zapni světla při západu slunce\""
+            echo "  ai-auto create \"při SOC baterie > 90% zapni bojler\""
+            echo "  ai-auto create \"když přijdu domů, zapni topení na 22°C\""
+            echo ""
+            ;;
+        entity)
+            echo ""
+            echo -e "${WHITE}AI-ENTITY - Entity Agent${NC}"
+            echo ""
+            echo -e "${YELLOW}POUŽITÍ:${NC}"
+            echo -e "  ${CYAN}ai-entity list${NC} [domain]       Seznam entit"
+            echo -e "  ${CYAN}ai-entity state${NC} <entity_id>   Stav entity"
+            echo -e "  ${CYAN}ai-entity on${NC} <entity_id>      Zapne entitu"
+            echo -e "  ${CYAN}ai-entity off${NC} <entity_id>     Vypne entitu"
+            echo -e "  ${CYAN}ai-entity toggle${NC} <entity_id>  Přepne entitu"
+            echo -e "  ${CYAN}ai-entity call${NC} <domain> <service> [--entity/-e] [--data/-d]"
+            echo -e "  ${CYAN}ai-entity ask${NC} \"dotaz\"         AI dotaz na entity"
+            echo ""
+            echo -e "${YELLOW}PŘÍKLADY:${NC}"
+            echo "  ai-entity list light"
+            echo "  ai-entity state sensor.temperature"
+            echo "  ai-entity on light.living_room"
+            echo "  ai-entity call climate set_temperature -e climate.thermostat -d '{\"temperature\":22}'"
+            echo ""
+            ;;
+        sensor)
+            echo ""
+            echo -e "${WHITE}AI-SENSOR - Sensor Agent${NC}"
+            echo ""
+            echo -e "${YELLOW}POUŽITÍ:${NC}"
+            echo -e "  ${CYAN}ai-sensor create${NC} \"popis\"         Vytvoří senzor"
+            echo -e "  ${CYAN}ai-sensor list${NC}                    Seznam senzorů"
+            echo -e "  ${CYAN}ai-sensor mqtt${NC} <topic>            MQTT senzor"
+            echo -e "  ${CYAN}ai-sensor combine${NC} <entity>...     Kombinovaný senzor"
+            echo ""
+            echo -e "${YELLOW}PŘÍKLADY:${NC}"
+            echo "  ai-sensor create \"průměrná teplota z 3 teploměrů\""
+            echo "  ai-sensor mqtt \"shellies/shelly1/temperature\""
+            echo "  ai-sensor combine sensor.temp1 sensor.temp2 --operation avg"
+            echo ""
+            ;;
+        script)
+            echo ""
+            echo -e "${WHITE}AI-SCRIPT - Script Agent${NC}"
+            echo ""
+            echo -e "${YELLOW}POUŽITÍ:${NC}"
+            echo -e "  ${CYAN}ai-script create${NC} \"popis\"      Vytvoří skript/scénu"
+            echo -e "  ${CYAN}ai-script list${NC}                Seznam skriptů/scén"
+            echo -e "  ${CYAN}ai-script run${NC} <entity_id>     Spustí skript"
+            echo -e "  ${CYAN}ai-script activate${NC} <entity_id> Aktivuje scénu"
+            echo ""
+            echo -e "${YELLOW}PŘÍKLADY:${NC}"
+            echo "  ai-script create \"ranní rutina - rolety, světla, kávovar\""
+            echo "  ai-script create \"scéna Film - ztlumit světla, zapnout TV\""
+            echo ""
+            ;;
+        energy)
+            echo ""
+            echo -e "${WHITE}AI-ENERGY - Energy Agent${NC}"
+            echo ""
+            echo -e "${YELLOW}POUŽITÍ:${NC}"
+            echo -e "  ${CYAN}ai-energy create${NC} \"popis\"   Vytvoří energetickou konfiguraci"
+            echo -e "  ${CYAN}ai-energy status${NC}           Aktuální statistiky"
+            echo -e "  ${CYAN}ai-energy sensors${NC}          Seznam energetických senzorů"
+            echo -e "  ${CYAN}ai-energy setup${NC}            Průvodce nastavením"
+            echo ""
+            echo -e "${YELLOW}PŘÍKLADY:${NC}"
+            echo "  ai-energy create \"automatizace pro přebytek FVE\""
+            echo "  ai-energy create \"utility meter pro denní spotřebu\""
+            echo ""
+            ;;
+        debug)
+            echo ""
+            echo -e "${WHITE}AI-DEBUG - Debug Agent${NC}"
+            echo ""
+            echo -e "${YELLOW}POUŽITÍ:${NC}"
+            echo -e "  ${CYAN}ai-debug analyze${NC} \"problém\"    AI analýza problému"
+            echo -e "  ${CYAN}ai-debug config${NC}               Kontrola konfigurace"
+            echo -e "  ${CYAN}ai-debug problems${NC}             Problémové entity"
+            echo -e "  ${CYAN}ai-debug logs${NC} [-n] [-f] [-e]  Zobrazení logů"
+            echo -e "  ${CYAN}ai-debug automation${NC} <id>      Analýza automatizace"
+            echo -e "  ${CYAN}ai-debug entity${NC} <id>          Diagnostika entity"
+            echo ""
+            echo -e "${YELLOW}PŘÍKLADY:${NC}"
+            echo "  ai-debug analyze \"proč nefunguje automatizace pro světla\""
+            echo "  ai-debug logs --errors"
+            echo "  ai-debug entity sensor.temperature"
+            echo ""
+            ;;
+        helper)
+            echo ""
+            echo -e "${WHITE}AI-HELPER - Helper Agent${NC}"
+            echo ""
+            echo -e "${YELLOW}POUŽITÍ:${NC}"
+            echo -e "  ${CYAN}ai-helper create${NC} \"popis\"        Vytvoří helper"
+            echo -e "  ${CYAN}ai-helper list${NC}                   Seznam helperů"
+            echo -e "  ${CYAN}ai-helper boolean${NC} <name>         Input boolean"
+            echo -e "  ${CYAN}ai-helper number${NC} <name> [opts]   Input number"
+            echo -e "  ${CYAN}ai-helper select${NC} <name> <opts>   Input select"
+            echo -e "  ${CYAN}ai-helper group${NC} <name> <entities> Skupina"
+            echo -e "  ${CYAN}ai-helper timer${NC} <name>           Timer"
+            echo ""
+            echo -e "${YELLOW}PŘÍKLADY:${NC}"
+            echo "  ai-helper boolean \"Režim dovolené\""
+            echo "  ai-helper number \"Cílová teplota\" --min 15 --max 30"
+            echo "  ai-helper select \"Režim domu\" Doma Pryč Spánek"
+            echo ""
+            ;;
+        *)
+            echo -e "${YELLOW}Neznámý agent: $1${NC}"
+            echo "Dostupní agenti: auto, entity, sensor, script, energy, debug, helper"
+            ;;
+    esac
+}
+
+show_examples() {
+    echo ""
+    echo -e "${WHITE}PŘÍKLADY POUŽITÍ${NC}"
+    echo ""
+    echo -e "${YELLOW}AUTOMATIZACE:${NC}"
+    echo "  ai-auto create \"zapni světla v obýváku při západu slunce\""
+    echo "  ai-auto create \"když SOC baterie > 90%, zapni bojler na 30 minut\""
+    echo "  ai-auto create \"každý den v 7:00 otevři rolety, ale jen ve všední dny\""
+    echo "  ai-auto create \"při pohybu v chodbě zapni světlo na 2 minuty\""
+    echo ""
+    echo -e "${YELLOW}SENZORY:${NC}"
+    echo "  ai-sensor create \"průměrná teplota z obýváku, ložnice a kuchyně\""
+    echo "  ai-sensor create \"spotřeba domu = import - export + baterie\""
+    echo "  ai-sensor mqtt \"zigbee2mqtt/sensor_teplota\" --name \"Teplota Zigbee\""
+    echo ""
+    echo -e "${YELLOW}SKRIPTY:${NC}"
+    echo "  ai-script create \"ranní rutina: otevři rolety, zapni kávovar, nastav topení\""
+    echo "  ai-script create \"scéna Film: ztlumit světla na 20%, zapnout TV\""
+    echo ""
+    echo -e "${YELLOW}ENERGIE:${NC}"
+    echo "  ai-energy setup"
+    echo "  ai-energy create \"automatizace pro využití přebytku FVE\""
+    echo ""
+    echo -e "${YELLOW}DEBUG:${NC}"
+    echo "  ai-debug analyze \"proč se automatizace pro světla nespouští\""
+    echo "  ai-debug entity sensor.unavailable_sensor"
+    echo ""
+}
+
+show_triggers() {
+    echo ""
+    echo -e "${WHITE}DOSTUPNÉ TRIGGERY PRO AUTOMATIZACE${NC}"
+    echo ""
+    echo -e "${CYAN}state${NC}           Změna stavu entity"
+    echo "                 entity_id, to, from, for"
+    echo ""
+    echo -e "${CYAN}numeric_state${NC}   Číselná hodnota překročí práh"
+    echo "                 entity_id, above, below, for"
+    echo ""
+    echo -e "${CYAN}time${NC}            Konkrétní čas"
+    echo "                 at: \"07:00:00\""
+    echo ""
+    echo -e "${CYAN}time_pattern${NC}    Časový vzor"
+    echo "                 hours, minutes, seconds (/5 = každých 5)"
+    echo ""
+    echo -e "${CYAN}sun${NC}             Východ/západ slunce"
+    echo "                 event: sunrise/sunset, offset"
+    echo ""
+    echo -e "${CYAN}zone${NC}            Vstup/výstup ze zóny"
+    echo "                 entity_id, zone, event: enter/leave"
+    echo ""
+    echo -e "${CYAN}device${NC}          Událost zařízení"
+    echo "                 device_id, type, subtype"
+    echo ""
+    echo -e "${CYAN}mqtt${NC}            MQTT zpráva"
+    echo "                 topic, payload"
+    echo ""
+    echo -e "${CYAN}template${NC}        Šablona je true"
+    echo "                 value_template"
+    echo ""
+    echo -e "${CYAN}webhook${NC}         HTTP webhook"
+    echo "                 webhook_id"
+    echo ""
+    echo -e "${CYAN}calendar${NC}        Kalendářní událost"
+    echo "                 entity_id, event: start/end"
+    echo ""
+    echo -e "${CYAN}tag${NC}             NFC/RFID tag"
+    echo "                 tag_id"
+    echo ""
+}
+
+show_services() {
+    echo ""
+    echo -e "${WHITE}HLAVNÍ SLUŽBY PODLE DOMÉN${NC}"
+    echo ""
+    echo -e "${YELLOW}light:${NC} turn_on, turn_off, toggle"
+    echo "       (brightness_pct, color_temp, rgb_color, transition)"
+    echo ""
+    echo -e "${YELLOW}switch:${NC} turn_on, turn_off, toggle"
+    echo ""
+    echo -e "${YELLOW}climate:${NC} set_temperature, set_hvac_mode, set_preset_mode"
+    echo "         (temperature, hvac_mode, preset_mode)"
+    echo ""
+    echo -e "${YELLOW}cover:${NC} open_cover, close_cover, stop_cover, set_cover_position"
+    echo "       (position: 0-100)"
+    echo ""
+    echo -e "${YELLOW}media_player:${NC} turn_on, turn_off, play_media, volume_set"
+    echo "              (volume_level: 0-1)"
+    echo ""
+    echo -e "${YELLOW}notify:${NC} notify (message, title, data)"
+    echo ""
+    echo -e "${YELLOW}automation:${NC} turn_on, turn_off, trigger, reload"
+    echo ""
+    echo -e "${YELLOW}script:${NC} turn_on (spuštění), reload"
+    echo ""
+    echo -e "${YELLOW}scene:${NC} turn_on (aktivace)"
+    echo ""
+    echo -e "${YELLOW}input_*:${NC} set_value, turn_on/off, select_option"
+    echo ""
+}
+
+# Main
+case "${1:-}" in
+    "")
+        show_main_help
+        ;;
+    auto|automation|entity|sensor|script|energy|debug|helper)
+        show_agent_help "$1"
+        ;;
+    examples)
+        show_examples
+        ;;
+    triggers)
+        show_triggers
+        ;;
+    services)
+        show_services
+        ;;
+    *)
+        echo -e "${YELLOW}Neznámý příkaz: $1${NC}"
+        echo "Použití: ai-help [agent|examples|triggers|services]"
+        ;;
+esac

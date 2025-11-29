@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-script - Script Agent CLI
+# Vytváření skriptů a scén
+# =============================================================================
+
+set -e
+source /opt/venv/bin/activate
+exec python3 /app/agents/script_agent.py "$@"

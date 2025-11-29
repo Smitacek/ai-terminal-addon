@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-helper - Helper Agent CLI
+# Input helpers, groups, timers, counters
+# =============================================================================
+
+set -e
+source /opt/venv/bin/activate
+exec python3 /app/agents/helper_agent.py "$@"

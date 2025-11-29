@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-sensor - Sensor Agent CLI
+# Vytváření template a MQTT senzorů
+# =============================================================================
+
+set -e
+source /opt/venv/bin/activate
+exec python3 /app/agents/sensor_agent.py "$@"

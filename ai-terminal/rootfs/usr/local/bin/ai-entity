@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-entity - Entity Agent CLI
+# Správa entit a volání služeb
+# =============================================================================
+
+set -e
+source /opt/venv/bin/activate
+exec python3 /app/agents/entity_agent.py "$@"

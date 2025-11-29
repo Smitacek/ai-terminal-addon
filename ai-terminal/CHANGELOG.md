@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.0] - 2024-11-29
+
+### Pridano
+- **7 specializovanych AI agentu:**
+  - `ai-auto` - Automation Agent pro automatizace
+  - `ai-entity` - Entity Agent pro spravu entit a sluzeb
+  - `ai-sensor` - Sensor Agent pro template/MQTT senzory
+  - `ai-script` - Script Agent pro skripty a sceny
+  - `ai-energy` - Energy Agent pro FVE, baterie, spotrebu
+  - `ai-debug` - Debug Agent pro diagnostiku
+  - `ai-helper` - Helper Agent pro input helpers, groups
+- Interaktivni napoveda `ai-help`
+- Detailni system prompty pro kazdeho agenta
+- CLI rozhrani pro vsechny agenty
+
+### Zmeneno
+- Prepracovany welcome screen s prehledem prikazu
+- Verze 0.3.0
+
 ## [0.2.0] - 2024-11-29
 
 ### Pridano

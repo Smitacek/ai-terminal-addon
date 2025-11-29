@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-energy - Energy Agent CLI
+# FVE, baterie, spotřeba energie
+# =============================================================================
+
+set -e
+source /opt/venv/bin/activate
+exec python3 /app/agents/energy_agent.py "$@"

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ai-auto - Automation Agent CLI
+# Vytváření a správa HA automatizací
+# =============================================================================
+
+set -e
+source /opt/venv/bin/activate
+exec python3 /app/agents/automation_agent.py "$@"
