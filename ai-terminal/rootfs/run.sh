@@ -203,7 +203,7 @@ alias ha='ha-cli'
 # Welcome message
 echo ""
 echo "==========================================="
-echo "  AI TERMINAL PRO HOME ASSISTANT v0.5.1"
+echo "  AI TERMINAL PRO HOME ASSISTANT v0.5.2"
 echo "==========================================="
 echo ""
 echo "AI Asistenti s MCP Home Assistant tools:"
@@ -234,7 +234,21 @@ echo "[INFO] Spoustim webovy terminal na portu 7681..."
 #   -t fontSize=14
 #   -t theme={"background":"#1e1e1e"}
 
-exec ttyd \
+# Spustit ttyd s explicitnim predanim promennych
+exec env \
+    SUPERVISOR_TOKEN="$SUPERVISOR_TOKEN" \
+    HA_TOKEN="$SUPERVISOR_TOKEN" \
+    AI_MODE="$AI_MODE" \
+    ALLOWED_FILES="$ALLOWED_FILES" \
+    BACKUP_DIR="$BACKUP_DIR" \
+    MQTT_BROKER="$MQTT_BROKER" \
+    MQTT_PORT="$MQTT_PORT" \
+    MQTT_USER="$MQTT_USER" \
+    MQTT_PASSWORD="$MQTT_PASSWORD" \
+    ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+    OPENAI_API_KEY="$OPENAI_API_KEY" \
+    GEMINI_API_KEY="$GEMINI_API_KEY" \
+    ttyd \
     -p 7681 \
     -W \
     -t 'fontSize=14' \
