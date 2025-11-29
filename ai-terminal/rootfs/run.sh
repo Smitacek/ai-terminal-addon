@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/with-contenv bash
 # =============================================================================
 # AI Terminal Add-on - Hlavni spousteci skript
 # =============================================================================
@@ -203,7 +203,7 @@ alias ha='ha-cli'
 # Welcome message
 echo ""
 echo "==========================================="
-echo "  AI TERMINAL PRO HOME ASSISTANT v0.5.2"
+echo "  AI TERMINAL PRO HOME ASSISTANT v0.5.3"
 echo "==========================================="
 echo ""
 echo "AI Asistenti s MCP Home Assistant tools:"
