@@ -2,7 +2,7 @@ name: AI Terminal
 description: >
   Plnohodnotny terminal s Claude CLI, Gemini CLI a AI agentem pro konfiguraci Home Assistanta.
   Webovy terminal primo v prohlizeci s pristupem ke konfiguraci HA, MQTT a HA API.
-version: "0.2.1"
+version: "0.2.2"
 slug: ai_terminal
 url: "https://github.com/Smitacek/ai-terminal-addon"
 

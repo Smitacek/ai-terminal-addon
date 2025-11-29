@@ -30,11 +30,13 @@ RUN apk add --no-cache \
     ca-certificates \
     && rm -rf /var/cache/apk/*
 
-# Instalace AI CLI nastroju z NPM
-# - Claude CLI (Anthropic)
-# - Gemini CLI (Google)
-RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli \
-    && npm cache clean --force
+# Build zavislosti pro nativni moduly (potrebuje Gemini CLI)
+RUN apk add --no-cache --virtual .build-deps \
+    build-base \
+    python3-dev \
+    && npm install -g @anthropic-ai/claude-code @google/gemini-cli \
+    && npm cache clean --force \
+    && apk del .build-deps
 
 # Vytvoreni virtualniho prostredi pro Python zavislosti
 RUN python3 -m venv /opt/venv
