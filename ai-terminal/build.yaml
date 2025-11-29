@@ -9,8 +9,8 @@ build_from:
 labels:
   org.opencontainers.image.title: AI Terminal
   org.opencontainers.image.description: Webovy terminal s Claude CLI a AI agentem pro Home Assistant
-  org.opencontainers.image.source: https://github.com/your-repo/ai-terminal-addon
-  org.opencontainers.image.authors: AI Terminal Team
+  org.opencontainers.image.source: https://github.com/Smitacek/ai-terminal-addon
+  org.opencontainers.image.authors: Smitacek
   org.opencontainers.image.licenses: MIT
 
 args:
