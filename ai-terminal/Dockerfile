@@ -49,7 +49,8 @@ COPY app /app
 
 # Nastaveni prav pro spustitelne soubory
 RUN chmod +x /usr/local/bin/* \
-    && chmod +x /run.sh
+    && chmod +x /run.sh \
+    && chmod +x /etc/services.d/ttyd/run
 
 # Pracovni adresar
 WORKDIR /config
