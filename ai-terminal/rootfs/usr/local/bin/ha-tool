@@ -132,9 +132,20 @@ cmd_history() {
         exit 1
     fi
 
-    # Vypočítat start time
+    # Vypočítat start time (BusyBox compatible)
+    local now_epoch=$(date +%s)
+    local hours_in_seconds=$((hours * 3600))
+    local start_epoch=$((now_epoch - hours_in_seconds))
+
+    # Formátování pro API (BusyBox date)
     local end_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    local start_time=$(date -u -d "-${hours} hours" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -v-${hours}H +"%Y-%m-%dT%H:%M:%SZ")
+    local start_time=$(date -u -d "@${start_epoch}" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null)
+
+    # Fallback pro starší BusyBox bez -d "@epoch"
+    if [ -z "$start_time" ]; then
+        # Použít Python jako fallback
+        start_time=$(python3 -c "from datetime import datetime, timedelta; print((datetime.utcnow() - timedelta(hours=${hours})).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+    fi
 
     echo -e "${CYAN}Historie pro ${entity_id} (posledních ${hours} hodin):${NC}"
     echo ""

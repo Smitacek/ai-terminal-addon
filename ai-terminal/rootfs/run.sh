@@ -203,7 +203,7 @@ alias ha='ha-cli'
 # Welcome message
 echo ""
 echo "==========================================="
-echo "  AI TERMINAL PRO HOME ASSISTANT v0.5.3"
+echo "  AI TERMINAL PRO HOME ASSISTANT v0.5.4"
 echo "==========================================="
 echo ""
 echo "AI Asistenti s MCP Home Assistant tools:"
