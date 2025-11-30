@@ -266,6 +266,54 @@ async def list_tools() -> list[Tool]:
                         "type": "integer",
                         "description": "Počet hodin historie (výchozí 24)",
                         "default": 24
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Omezit počet vrácených záznamů (0 = bez limitu)",
+                        "default": 0
+                    }
+                },
+                "required": ["entity_id"]
+            }
+        ),
+        Tool(
+            name="ha_get_stats",
+            description="Získá statistiky entity (průměr, min, max) a vypočítá energii v kWh z W hodnot",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "entity_id": {
+                        "type": "string",
+                        "description": "ID entity (senzor s numerickou hodnotou, např. sensor.pv_power)"
+                    },
+                    "hours": {
+                        "type": "integer",
+                        "description": "Počet hodin pro statistiky (výchozí 24)",
+                        "default": 24
+                    }
+                },
+                "required": ["entity_id"]
+            }
+        ),
+        Tool(
+            name="ha_get_interval_stats",
+            description="Získá intervalové průměry entity (např. hodinové průměry)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "entity_id": {
+                        "type": "string",
+                        "description": "ID entity"
+                    },
+                    "hours": {
+                        "type": "integer",
+                        "description": "Počet hodin historie (výchozí 24)",
+                        "default": 24
+                    },
+                    "interval_minutes": {
+                        "type": "integer",
+                        "description": "Interval v minutách (výchozí 60 = hodinové průměry)",
+                        "default": 60
                     }
                 },
                 "required": ["entity_id"]
@@ -534,24 +582,177 @@ async def _execute_tool(name: str, args: dict) -> Any:
     elif name == "ha_get_history":
         entity_id = args["entity_id"]
         hours = args.get("hours", 24)
+        limit = args.get("limit", 0)
 
         from datetime import timedelta
-        end_time = datetime.now()
+        end_time = datetime.utcnow()
         start_time = end_time - timedelta(hours=hours)
 
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{HA_URL}/history/period/{start_time.isoformat()}",
+                f"{HA_URL}/history/period/{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}",
                 headers=ha_client.headers,
-                params={"filter_entity_id": entity_id, "end_time": end_time.isoformat()},
-                timeout=30.0
+                params={
+                    "filter_entity_id": entity_id,
+                    "end_time": end_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    "minimal_response": "true"
+                },
+                timeout=60.0
             )
             response.raise_for_status()
             history = response.json()
 
         if history and len(history) > 0:
-            return history[0][:50]  # Max 50 záznamů
-        return []
+            data = history[0]
+            total = len(data)
+            if limit > 0:
+                data = data[-limit:]  # Posledních N záznamů
+            return {
+                "entity_id": entity_id,
+                "hours": hours,
+                "total_records": total,
+                "returned_records": len(data),
+                "history": data
+            }
+        return {"entity_id": entity_id, "hours": hours, "total_records": 0, "history": []}
+
+    elif name == "ha_get_stats":
+        entity_id = args["entity_id"]
+        hours = args.get("hours", 24)
+
+        from datetime import timedelta
+        from collections import defaultdict
+
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(hours=hours)
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{HA_URL}/history/period/{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+                headers=ha_client.headers,
+                params={
+                    "filter_entity_id": entity_id,
+                    "end_time": end_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    "minimal_response": "true"
+                },
+                timeout=60.0
+            )
+            response.raise_for_status()
+            history = response.json()
+
+        if not history or not history[0]:
+            return {"error": "Žádná data", "entity_id": entity_id}
+
+        data = history[0]
+        values = []
+        timestamps = []
+
+        for item in data:
+            try:
+                val = float(item['state'])
+                values.append(val)
+                ts_str = item['last_changed'].replace('Z', '+00:00')
+                timestamps.append(datetime.fromisoformat(ts_str))
+            except (ValueError, KeyError):
+                pass
+
+        if not values:
+            return {"error": "Žádné numerické hodnoty", "entity_id": entity_id}
+
+        # Statistiky
+        count = len(values)
+        avg = sum(values) / count
+        min_val = min(values)
+        max_val = max(values)
+
+        # Výpočet kWh z W (integrace - lichoběžníková metoda)
+        kwh = 0.0
+        if len(timestamps) > 1:
+            for i in range(1, len(timestamps)):
+                dt_hours = (timestamps[i] - timestamps[i-1]).total_seconds() / 3600
+                avg_power = (values[i] + values[i-1]) / 2
+                kwh += avg_power * dt_hours / 1000  # W -> kWh
+
+        return {
+            "entity_id": entity_id,
+            "hours": hours,
+            "count": count,
+            "average": round(avg, 2),
+            "minimum": round(min_val, 2),
+            "maximum": round(max_val, 2),
+            "energy_kwh": round(kwh, 3),
+            "time_range": {
+                "from": timestamps[0].strftime('%Y-%m-%d %H:%M') if timestamps else None,
+                "to": timestamps[-1].strftime('%Y-%m-%d %H:%M') if timestamps else None
+            }
+        }
+
+    elif name == "ha_get_interval_stats":
+        entity_id = args["entity_id"]
+        hours = args.get("hours", 24)
+        interval_min = args.get("interval_minutes", 60)
+
+        from datetime import timedelta
+        from collections import defaultdict
+
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(hours=hours)
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{HA_URL}/history/period/{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+                headers=ha_client.headers,
+                params={
+                    "filter_entity_id": entity_id,
+                    "end_time": end_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    "minimal_response": "true"
+                },
+                timeout=60.0
+            )
+            response.raise_for_status()
+            history = response.json()
+
+        if not history or not history[0]:
+            return {"error": "Žádná data", "entity_id": entity_id}
+
+        data = history[0]
+
+        # Seskupit podle intervalů
+        buckets = defaultdict(list)
+        for item in data:
+            try:
+                val = float(item['state'])
+                ts_str = item['last_changed'].replace('Z', '+00:00')
+                ts = datetime.fromisoformat(ts_str)
+                # Zaokrouhlit na interval
+                bucket_min = (ts.minute // interval_min) * interval_min
+                bucket_ts = ts.replace(minute=bucket_min, second=0, microsecond=0)
+                buckets[bucket_ts.strftime('%Y-%m-%d %H:%M')].append(val)
+            except (ValueError, KeyError):
+                pass
+
+        if not buckets:
+            return {"error": "Žádné numerické hodnoty", "entity_id": entity_id}
+
+        # Vypočítat průměry
+        intervals = []
+        for ts_str in sorted(buckets.keys()):
+            vals = buckets[ts_str]
+            intervals.append({
+                "time": ts_str,
+                "average": round(sum(vals) / len(vals), 2),
+                "count": len(vals),
+                "min": round(min(vals), 2),
+                "max": round(max(vals), 2)
+            })
+
+        return {
+            "entity_id": entity_id,
+            "hours": hours,
+            "interval_minutes": interval_min,
+            "total_intervals": len(intervals),
+            "intervals": intervals
+        }
 
     # =========================================================================
     # Config tools
