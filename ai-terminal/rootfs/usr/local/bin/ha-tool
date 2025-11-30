@@ -65,10 +65,14 @@ show_help() {
     echo -e "${YELLOW}ENTITY:${NC}"
     echo "  ha-tool states [domain]           Seznam entit (volitelně filtr podle domény)"
     echo "  ha-tool state <entity_id>         Stav konkrétní entity"
-    echo "  ha-tool history <entity_id> [h]   Historie entity (výchozí 24 hodin)"
     echo "  ha-tool on <entity_id>            Zapnout entitu"
     echo "  ha-tool off <entity_id>           Vypnout entitu"
     echo "  ha-tool toggle <entity_id>        Přepnout entitu"
+    echo ""
+    echo -e "${YELLOW}HISTORIE A STATISTIKY:${NC}"
+    echo "  ha-tool history <entity> [h] [limit]    Historie (h=hodiny, limit=počet)"
+    echo "  ha-tool stats <entity> [h]              Statistiky + kWh výpočet"
+    echo "  ha-tool interval <entity> [h] [min]     Intervalové průměry (min=interval)"
     echo ""
     echo -e "${YELLOW}SLUŽBY:${NC}"
     echo "  ha-tool call <domain> <service> [entity_id] [json_data]"
@@ -92,7 +96,9 @@ show_help() {
     echo -e "${YELLOW}PŘÍKLADY:${NC}"
     echo "  ha-tool states light"
     echo "  ha-tool state sensor.temperature"
-    echo "  ha-tool history sensor.temperature 48"
+    echo "  ha-tool history sensor.power 24 100     # 24h, posledních 100 záznamů"
+    echo "  ha-tool stats sensor.pv_power 24        # statistiky + kWh za 24h"
+    echo "  ha-tool interval sensor.power 24 60    # hodinové průměry za 24h"
     echo "  ha-tool on light.living_room"
     echo "  ha-tool call climate set_temperature climate.thermostat '{\"temperature\":22}'"
     echo "  ha-tool template '{{ states(\"sensor.temperature\") }}'"
@@ -126,38 +132,212 @@ cmd_state() {
 cmd_history() {
     local entity_id="$1"
     local hours="${2:-24}"
+    local limit="${3:-0}"  # 0 = bez limitu
 
     if [ -z "$entity_id" ]; then
         echo -e "${RED}Chyba: Zadej entity_id${NC}"
         exit 1
     fi
 
-    # Vypočítat start time (BusyBox compatible)
-    local now_epoch=$(date +%s)
-    local hours_in_seconds=$((hours * 3600))
-    local start_epoch=$((now_epoch - hours_in_seconds))
-
-    # Formátování pro API (BusyBox date)
-    local end_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    local start_time=$(date -u -d "@${start_epoch}" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null)
-
-    # Fallback pro starší BusyBox bez -d "@epoch"
-    if [ -z "$start_time" ]; then
-        # Použít Python jako fallback
-        start_time=$(python3 -c "from datetime import datetime, timedelta; print((datetime.utcnow() - timedelta(hours=${hours})).strftime('%Y-%m-%dT%H:%M:%SZ'))")
-    fi
+    # Vypočítat start time pomocí Python (spolehlivé)
+    local end_time=$(python3 -c "from datetime import datetime; print(datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))")
+    local start_time=$(python3 -c "from datetime import datetime, timedelta; print((datetime.utcnow() - timedelta(hours=${hours})).strftime('%Y-%m-%dT%H:%M:%SZ'))")
 
     echo -e "${CYAN}Historie pro ${entity_id} (posledních ${hours} hodin):${NC}"
     echo ""
 
-    curl -s -X GET \
+    local result=$(curl -s -X GET \
         -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
         -H "Content-Type: application/json" \
-        "${HA_URL}/history/period/${start_time}?filter_entity_id=${entity_id}&end_time=${end_time}" \
-        | jq -r '.[0][] | "\(.last_changed): \(.state)"' 2>/dev/null | head -50
+        "${HA_URL}/history/period/${start_time}?filter_entity_id=${entity_id}&end_time=${end_time}&minimal_response")
 
-    echo ""
-    echo -e "${CYAN}Zobrazeno max 50 záznamů${NC}"
+    if [ "$limit" -gt 0 ]; then
+        echo "$result" | jq -r ".[0][] | \"\(.last_changed): \(.state)\"" 2>/dev/null | tail -${limit}
+        echo ""
+        echo -e "${CYAN}Zobrazeno posledních ${limit} záznamů${NC}"
+    else
+        echo "$result" | jq -r '.[0][] | "\(.last_changed): \(.state)"' 2>/dev/null
+        local count=$(echo "$result" | jq '.[0] | length' 2>/dev/null)
+        echo ""
+        echo -e "${CYAN}Celkem ${count} záznamů${NC}"
+    fi
+}
+
+cmd_history_stats() {
+    local entity_id="$1"
+    local hours="${2:-24}"
+
+    if [ -z "$entity_id" ]; then
+        echo -e "${RED}Chyba: Zadej entity_id${NC}"
+        exit 1
+    fi
+
+    # Použít Python pro výpočet statistik
+    python3 << PYSCRIPT
+import json
+import sys
+from datetime import datetime, timedelta
+try:
+    import httpx
+except ImportError:
+    import urllib.request
+    import ssl
+
+# Parametry
+entity_id = "${entity_id}"
+hours = ${hours}
+supervisor_token = "${SUPERVISOR_TOKEN}"
+ha_url = "${HA_URL}"
+
+end_time = datetime.utcnow()
+start_time = end_time - timedelta(hours=hours)
+
+url = f"{ha_url}/history/period/{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}?filter_entity_id={entity_id}&end_time={end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}&minimal_response"
+
+# Fetch data
+try:
+    import httpx
+    response = httpx.get(url, headers={"Authorization": f"Bearer {supervisor_token}"}, timeout=30)
+    data = response.json()
+except:
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {supervisor_token}"})
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+        data = json.loads(resp.read().decode())
+
+if not data or not data[0]:
+    print("Žádná data")
+    sys.exit(1)
+
+history = data[0]
+values = []
+timestamps = []
+
+for item in history:
+    try:
+        val = float(item['state'])
+        values.append(val)
+        timestamps.append(datetime.fromisoformat(item['last_changed'].replace('Z', '+00:00')))
+    except (ValueError, KeyError):
+        pass
+
+if not values:
+    print("Žádné numerické hodnoty")
+    sys.exit(1)
+
+# Statistiky
+count = len(values)
+avg = sum(values) / count
+min_val = min(values)
+max_val = max(values)
+
+# Výpočet kWh z kW (integrace)
+kwh = 0.0
+if len(timestamps) > 1:
+    for i in range(1, len(timestamps)):
+        dt_hours = (timestamps[i] - timestamps[i-1]).total_seconds() / 3600
+        avg_power = (values[i] + values[i-1]) / 2
+        kwh += avg_power * dt_hours / 1000  # W -> kWh
+
+print(f"\033[0;36mStatistiky pro {entity_id} ({hours}h):\033[0m")
+print(f"")
+print(f"  Počet záznamů:  {count}")
+print(f"  Průměr:         {avg:.2f}")
+print(f"  Minimum:        {min_val:.2f}")
+print(f"  Maximum:        {max_val:.2f}")
+print(f"")
+print(f"  \033[1;33mEnergie (kWh):   {kwh:.3f}\033[0m")
+print(f"  (integrace W->kWh za {hours}h)")
+print(f"")
+print(f"  Časový rozsah:")
+print(f"    Od: {timestamps[0].strftime('%Y-%m-%d %H:%M')}")
+print(f"    Do: {timestamps[-1].strftime('%Y-%m-%d %H:%M')}")
+PYSCRIPT
+}
+
+cmd_history_interval() {
+    local entity_id="$1"
+    local hours="${2:-24}"
+    local interval="${3:-60}"  # interval v minutách
+
+    if [ -z "$entity_id" ]; then
+        echo -e "${RED}Chyba: Zadej entity_id${NC}"
+        exit 1
+    fi
+
+    # Použít Python pro intervalové průměry
+    python3 << PYSCRIPT
+import json
+import sys
+from datetime import datetime, timedelta
+from collections import defaultdict
+try:
+    import httpx
+except ImportError:
+    import urllib.request
+    import ssl
+
+# Parametry
+entity_id = "${entity_id}"
+hours = ${hours}
+interval_min = ${interval}
+supervisor_token = "${SUPERVISOR_TOKEN}"
+ha_url = "${HA_URL}"
+
+end_time = datetime.utcnow()
+start_time = end_time - timedelta(hours=hours)
+
+url = f"{ha_url}/history/period/{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')}?filter_entity_id={entity_id}&end_time={end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}&minimal_response"
+
+# Fetch data
+try:
+    import httpx
+    response = httpx.get(url, headers={"Authorization": f"Bearer {supervisor_token}"}, timeout=30)
+    data = response.json()
+except:
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {supervisor_token}"})
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+        data = json.loads(resp.read().decode())
+
+if not data or not data[0]:
+    print("Žádná data")
+    sys.exit(1)
+
+history = data[0]
+
+# Seskupit podle intervalů
+buckets = defaultdict(list)
+for item in history:
+    try:
+        val = float(item['state'])
+        ts = datetime.fromisoformat(item['last_changed'].replace('Z', '+00:00'))
+        # Zaokrouhlit na interval
+        bucket_min = (ts.minute // interval_min) * interval_min
+        bucket_ts = ts.replace(minute=bucket_min, second=0, microsecond=0)
+        buckets[bucket_ts].append(val)
+    except (ValueError, KeyError):
+        pass
+
+if not buckets:
+    print("Žádné numerické hodnoty")
+    sys.exit(1)
+
+print(f"\033[0;36mIntervalové průměry pro {entity_id} ({hours}h, interval {interval_min}min):\033[0m")
+print(f"")
+
+for ts in sorted(buckets.keys()):
+    vals = buckets[ts]
+    avg = sum(vals) / len(vals)
+    print(f"  {ts.strftime('%Y-%m-%d %H:%M')}  avg: {avg:8.2f}  (n={len(vals)})")
+
+print(f"")
+print(f"\033[0;36mCelkem {len(buckets)} intervalů\033[0m")
+PYSCRIPT
 }
 
 cmd_on() {
@@ -380,7 +560,13 @@ case "${1:-}" in
         cmd_state "$2"
         ;;
     history)
-        cmd_history "$2" "$3"
+        cmd_history "$2" "$3" "$4"
+        ;;
+    stats)
+        cmd_history_stats "$2" "$3"
+        ;;
+    interval)
+        cmd_history_interval "$2" "$3" "$4"
         ;;
     on)
         cmd_on "$2"
