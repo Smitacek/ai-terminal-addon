@@ -229,31 +229,61 @@ if not values:
 
 # Statistiky
 count = len(values)
+non_zero_values = [v for v in values if v > 0]
 avg = sum(values) / count
+avg_non_zero = sum(non_zero_values) / len(non_zero_values) if non_zero_values else 0
 min_val = min(values)
 max_val = max(values)
 
-# Výpočet kWh z kW (integrace)
+# Analýza intervalů
+intervals_sec = []
+if len(timestamps) > 1:
+    for i in range(1, len(timestamps)):
+        dt = (timestamps[i] - timestamps[i-1]).total_seconds()
+        intervals_sec.append(dt)
+
+avg_interval = sum(intervals_sec) / len(intervals_sec) if intervals_sec else 0
+min_interval = min(intervals_sec) if intervals_sec else 0
+max_interval = max(intervals_sec) if intervals_sec else 0
+
+# Výpočet kWh z W (integrace - lichoběžníková metoda)
+# Používáme reálné intervaly z dat
 kwh = 0.0
+active_hours = 0.0
+
 if len(timestamps) > 1:
     for i in range(1, len(timestamps)):
         dt_hours = (timestamps[i] - timestamps[i-1]).total_seconds() / 3600
         avg_power = (values[i] + values[i-1]) / 2
-        kwh += avg_power * dt_hours / 1000  # W -> kWh
+
+        # Počítáme jen kde je nenulový výkon
+        if avg_power > 0:
+            kwh += avg_power * dt_hours / 1000  # W -> kWh
+            active_hours += dt_hours
+
+# Celková doba od prvního do posledního záznamu
+total_hours = (timestamps[-1] - timestamps[0]).total_seconds() / 3600 if len(timestamps) > 1 else 0
 
 print(f"\033[0;36mStatistiky pro {entity_id} ({hours}h):\033[0m")
 print(f"")
-print(f"  Počet záznamů:  {count}")
-print(f"  Průměr:         {avg:.2f}")
-print(f"  Minimum:        {min_val:.2f}")
-print(f"  Maximum:        {max_val:.2f}")
+print(f"  Počet záznamů:    {count}")
+print(f"  Nenulových:       {len(non_zero_values)}")
+print(f"  Průměr (vše):     {avg:.2f} W")
+print(f"  Průměr (>0):      {avg_non_zero:.2f} W")
+print(f"  Minimum:          {min_val:.2f} W")
+print(f"  Maximum:          {max_val:.2f} W")
 print(f"")
-print(f"  \033[1;33mEnergie (kWh):   {kwh:.3f}\033[0m")
-print(f"  (integrace W->kWh za {hours}h)")
+print(f"  Intervaly záznamů:")
+print(f"    Průměrný:       {avg_interval:.1f} s")
+print(f"    Min/Max:        {min_interval:.1f} / {max_interval:.1f} s")
+print(f"")
+print(f"  \033[1;33mEnergie (kWh):    {kwh:.3f}\033[0m")
+print(f"  Aktivní doba:     {active_hours:.2f} h (výkon > 0)")
+print(f"  Celková doba:     {total_hours:.2f} h")
 print(f"")
 print(f"  Časový rozsah:")
-print(f"    Od: {timestamps[0].strftime('%Y-%m-%d %H:%M')}")
-print(f"    Do: {timestamps[-1].strftime('%Y-%m-%d %H:%M')}")
+print(f"    Od: {timestamps[0].strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"    Do: {timestamps[-1].strftime('%Y-%m-%d %H:%M:%S')}")
 PYSCRIPT
 }
 

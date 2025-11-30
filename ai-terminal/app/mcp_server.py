@@ -661,29 +661,58 @@ async def _execute_tool(name: str, args: dict) -> Any:
 
         # Statistiky
         count = len(values)
+        non_zero_values = [v for v in values if v > 0]
         avg = sum(values) / count
+        avg_non_zero = sum(non_zero_values) / len(non_zero_values) if non_zero_values else 0
         min_val = min(values)
         max_val = max(values)
 
+        # Analýza intervalů
+        intervals_sec = []
+        if len(timestamps) > 1:
+            for i in range(1, len(timestamps)):
+                dt = (timestamps[i] - timestamps[i-1]).total_seconds()
+                intervals_sec.append(dt)
+
+        avg_interval = sum(intervals_sec) / len(intervals_sec) if intervals_sec else 0
+        min_interval = min(intervals_sec) if intervals_sec else 0
+        max_interval = max(intervals_sec) if intervals_sec else 0
+
         # Výpočet kWh z W (integrace - lichoběžníková metoda)
         kwh = 0.0
+        active_hours = 0.0
+
         if len(timestamps) > 1:
             for i in range(1, len(timestamps)):
                 dt_hours = (timestamps[i] - timestamps[i-1]).total_seconds() / 3600
                 avg_power = (values[i] + values[i-1]) / 2
-                kwh += avg_power * dt_hours / 1000  # W -> kWh
+
+                if avg_power > 0:
+                    kwh += avg_power * dt_hours / 1000  # W -> kWh
+                    active_hours += dt_hours
+
+        total_hours = (timestamps[-1] - timestamps[0]).total_seconds() / 3600 if len(timestamps) > 1 else 0
 
         return {
             "entity_id": entity_id,
             "hours": hours,
             "count": count,
+            "non_zero_count": len(non_zero_values),
             "average": round(avg, 2),
+            "average_non_zero": round(avg_non_zero, 2),
             "minimum": round(min_val, 2),
             "maximum": round(max_val, 2),
+            "interval_stats": {
+                "avg_seconds": round(avg_interval, 1),
+                "min_seconds": round(min_interval, 1),
+                "max_seconds": round(max_interval, 1)
+            },
             "energy_kwh": round(kwh, 3),
+            "active_hours": round(active_hours, 2),
+            "total_hours": round(total_hours, 2),
             "time_range": {
-                "from": timestamps[0].strftime('%Y-%m-%d %H:%M') if timestamps else None,
-                "to": timestamps[-1].strftime('%Y-%m-%d %H:%M') if timestamps else None
+                "from": timestamps[0].strftime('%Y-%m-%d %H:%M:%S') if timestamps else None,
+                "to": timestamps[-1].strftime('%Y-%m-%d %H:%M:%S') if timestamps else None
             }
         }
 
