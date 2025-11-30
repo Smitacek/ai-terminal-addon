@@ -247,14 +247,22 @@ min_interval = min(intervals_sec) if intervals_sec else 0
 max_interval = max(intervals_sec) if intervals_sec else 0
 
 # Výpočet kWh z W (integrace - lichoběžníková metoda)
-# Používáme reálné intervaly z dat
+# Používáme reálné intervaly z dat, ale max 5 minut mezi záznamy
 kwh = 0.0
 active_hours = 0.0
+skipped_gaps = 0
+MAX_INTERVAL_SEC = 300  # 5 minut - větší mezery ignorujeme
 
 if len(timestamps) > 1:
     for i in range(1, len(timestamps)):
-        dt_hours = (timestamps[i] - timestamps[i-1]).total_seconds() / 3600
+        dt_seconds = (timestamps[i] - timestamps[i-1]).total_seconds()
+        dt_hours = dt_seconds / 3600
         avg_power = (values[i] + values[i-1]) / 2
+
+        # Přeskočit velké mezery (> 5 min) - to jsou výpadky nebo noc
+        if dt_seconds > MAX_INTERVAL_SEC:
+            skipped_gaps += 1
+            continue
 
         # Počítáme jen kde je nenulový výkon
         if avg_power > 0:
@@ -276,10 +284,11 @@ print(f"")
 print(f"  Intervaly záznamů:")
 print(f"    Průměrný:       {avg_interval:.1f} s")
 print(f"    Min/Max:        {min_interval:.1f} / {max_interval:.1f} s")
+print(f"    Přeskočeno:     {skipped_gaps} (mezery > {MAX_INTERVAL_SEC}s)")
 print(f"")
 print(f"  \033[1;33mEnergie (kWh):    {kwh:.3f}\033[0m")
-print(f"  Aktivní doba:     {active_hours:.2f} h (výkon > 0)")
-print(f"  Celková doba:     {total_hours:.2f} h")
+print(f"  Aktivní doba:     {active_hours:.2f} h (reálná z dat)")
+print(f"  Celková doba:     {total_hours:.2f} h (první-poslední záznam)")
 print(f"")
 print(f"  Časový rozsah:")
 print(f"    Od: {timestamps[0].strftime('%Y-%m-%d %H:%M:%S')}")

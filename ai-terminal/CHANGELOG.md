@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.8] - 2025-11-30
+
+### Opraveno
+- **Oprava výpočtu kWh** - Přeskakuje velké mezery v datech (> 5 minut)
+  - Předchozí verze zahrnovala noční mezery do výpočtu (8h × 1500W = chyba 12 kWh)
+  - Nyní počítá pouze z reálných záznamů s max. intervalem 300 sekund
+  - Zobrazuje počet přeskočených mezer ve výstupu
+- Stejná oprava aplikována v ha-tool i MCP serveru
+
 ## [0.5.0] - 2025-11-29
 
 ### Pridano

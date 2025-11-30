@@ -679,13 +679,22 @@ async def _execute_tool(name: str, args: dict) -> Any:
         max_interval = max(intervals_sec) if intervals_sec else 0
 
         # Výpočet kWh z W (integrace - lichoběžníková metoda)
+        # Přeskakujeme velké mezery v datech (> 5 minut) - výpadky, noc atd.
+        MAX_INTERVAL_SEC = 300  # 5 minut
         kwh = 0.0
         active_hours = 0.0
+        skipped_gaps = 0
 
         if len(timestamps) > 1:
             for i in range(1, len(timestamps)):
-                dt_hours = (timestamps[i] - timestamps[i-1]).total_seconds() / 3600
+                dt_seconds = (timestamps[i] - timestamps[i-1]).total_seconds()
+                dt_hours = dt_seconds / 3600
                 avg_power = (values[i] + values[i-1]) / 2
+
+                # Přeskočit velké mezery
+                if dt_seconds > MAX_INTERVAL_SEC:
+                    skipped_gaps += 1
+                    continue
 
                 if avg_power > 0:
                     kwh += avg_power * dt_hours / 1000  # W -> kWh
@@ -705,7 +714,8 @@ async def _execute_tool(name: str, args: dict) -> Any:
             "interval_stats": {
                 "avg_seconds": round(avg_interval, 1),
                 "min_seconds": round(min_interval, 1),
-                "max_seconds": round(max_interval, 1)
+                "max_seconds": round(max_interval, 1),
+                "skipped_gaps": skipped_gaps
             },
             "energy_kwh": round(kwh, 3),
             "active_hours": round(active_hours, 2),
